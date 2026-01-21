@@ -1,0 +1,1756 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POM Cobranzas - Dashboards Operativos</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #f5f7fa;
+            color: #1a202c;
+        }
+        
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            overflow-y: auto;
+            z-index: 1000;
+            transition: transform 0.3s ease;
+        }
+        
+        /* Sidebar responsive - oculto en móviles por defecto */
+        @media (max-width: 1024px) {
+            .sidebar {
+                transform: translateX(-100%);
+                box-shadow: 2px 0 10px rgba(0, 0, 0, 0.3);
+            }
+            
+            .sidebar.open {
+                transform: translateX(0);
+            }
+        }
+        
+        /* Mejoras de accesibilidad móvil */
+        @media (max-width: 1024px) {
+            .menu-item {
+                min-height: 48px; /* Tamaño mínimo táctil */
+            }
+        }
+        
+        .sidebar-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .sidebar-title {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #94a3b8;
+            margin-bottom: 1rem;
+            padding: 0 0.75rem;
+        }
+        
+        .menu-item {
+            padding: 0.875rem 1.5rem;
+            color: #cbd5e1;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border-left: 3px solid transparent;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        
+        .menu-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: #ffffff;
+        }
+        
+        .menu-item.active {
+            background: rgba(59, 130, 246, 0.1);
+            color: #60a5fa;
+            border-left-color: #3b82f6;
+        }
+        
+        .menu-number {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #64748b;
+            min-width: 24px;
+        }
+        
+        .menu-item.active .menu-number {
+            color: #60a5fa;
+        }
+        
+        /* Main Content */
+        .main-content {
+            margin-left: 280px;
+            min-height: 100vh;
+            transition: margin-left 0.3s ease;
+        }
+        
+        @media (max-width: 1024px) {
+            .main-content {
+                margin-left: 0;
+            }
+        }
+        
+        /* Header */
+        .top-header {
+            background: #ffffff;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+        
+        @media (max-width: 768px) {
+            .top-header {
+                padding: 1rem;
+            }
+        }
+        
+        /* Botón hamburguesa */
+        .menu-toggle {
+            display: none;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 0.5rem 0.75rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.25rem;
+            margin-right: 1rem;
+        }
+        
+        @media (max-width: 1024px) {
+            .menu-toggle {
+                display: block;
+            }
+        }
+        
+        /* Overlay para móviles */
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+        }
+        
+        @media (max-width: 1024px) {
+            .sidebar-overlay.show {
+                display: block;
+            }
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .page-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #0f172a;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        
+        @media (max-width: 768px) {
+            .page-title {
+                font-size: 1.25rem;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .page-title {
+                font-size: 1rem;
+            }
+        }
+        
+        .header-info {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+        }
+        
+        @media (max-width: 768px) {
+            .header-info {
+                gap: 1rem;
+                flex-wrap: wrap;
+            }
+            
+            .status-indicator {
+                font-size: 0.75rem;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .header-info {
+                gap: 0.5rem;
+            }
+        }
+        
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            color: #64748b;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: #10b981;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        /* Dashboard Content */
+        .dashboard-content {
+            padding: 2rem;
+        }
+        
+        @media (max-width: 768px) {
+            .dashboard-content {
+                padding: 1rem;
+            }
+        }
+        
+        /* Metric Cards */
+        .metric-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+        
+        .metric-card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+            border-color: #cbd5e0;
+        }
+        
+        .metric-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            margin-bottom: 1rem;
+        }
+        
+        .metric-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #64748b;
+            margin-bottom: 0.5rem;
+        }
+        
+        .metric-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 2rem;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 0.5rem;
+        }
+        
+        @media (max-width: 768px) {
+            .metric-value {
+                font-size: 1.5rem;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .metric-value {
+                font-size: 1.25rem;
+            }
+        }
+        
+        .metric-change {
+            font-size: 0.875rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        
+        .metric-change.positive {
+            color: #10b981;
+        }
+        
+        .metric-change.negative {
+            color: #ef4444;
+        }
+        
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        
+        .badge-success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .badge-warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        
+        .badge-danger {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        /* Chart Container */
+        .chart-container {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .chart-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #0f172a;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .chart-canvas-container {
+            position: relative;
+            height: 350px;
+        }
+        
+        @media (max-width: 768px) {
+            .chart-canvas-container {
+                height: 250px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .chart-canvas-container {
+                height: 200px;
+            }
+        }
+        
+        /* Section */
+        .section {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .section-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #0f172a;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        /* Table */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .data-table thead {
+            background: #f8fafc;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        
+        .data-table th {
+            padding: 0.75rem 1rem;
+            text-align: left;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #64748b;
+        }
+        
+        .data-table td {
+            padding: 1rem;
+            border-bottom: 1px solid #f1f5f9;
+            color: #475569;
+            font-size: 0.875rem;
+        }
+        
+        .data-table tbody tr:hover {
+            background: #f8fafc;
+        }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #64748b;
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+        
+        /* Hidden class for switching dashboards */
+        .dashboard-hidden {
+            display: none;
+        }
+        
+        /* Alertas y Anomalías */
+        .alert-card {
+            background: #ffffff;
+            border-left: 4px solid;
+            border-radius: 8px;
+            padding: 1rem 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        
+        .alert-card.critical {
+            border-left-color: #ef4444;
+            background: #fef2f2;
+        }
+        
+        .alert-card.warning {
+            border-left-color: #f59e0b;
+            background: #fffbeb;
+        }
+        
+        .alert-card.info {
+            border-left-color: #3b82f6;
+            background: #eff6ff;
+        }
+        
+        .alert-card.success {
+            border-left-color: #10b981;
+            background: #f0fdf4;
+        }
+        
+        .anomaly-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        
+        .anomaly-indicator.detected {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        .anomaly-indicator.normal {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .prediction-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        /* Drill-down - Métricas clickeables */
+        .metric-card.clickable {
+            cursor: pointer;
+            position: relative;
+        }
+        
+        .metric-card.clickable::after {
+            content: '🔍';
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            opacity: 0;
+            transition: opacity 0.2s;
+            font-size: 1rem;
+        }
+        
+        .metric-card.clickable:hover::after {
+            opacity: 1;
+        }
+        
+        .metric-card.clickable:hover {
+            border-color: #3b82f6;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+        }
+        
+        /* Modal de detalle */
+        .detail-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            overflow-y: auto;
+            padding: 2rem;
+        }
+        
+        .detail-modal.show {
+            display: block;
+        }
+        
+        .detail-modal-content {
+            background: #ffffff;
+            border-radius: 12px;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            position: relative;
+            margin-top: 2rem;
+            margin-bottom: 2rem;
+        }
+        
+        .detail-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        
+        .detail-modal-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #0f172a;
+        }
+        
+        .detail-modal-close {
+            background: #f1f5f9;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #64748b;
+            font-size: 1.25rem;
+            transition: all 0.2s;
+        }
+        
+        .detail-modal-close:hover {
+            background: #e2e8f0;
+            color: #0f172a;
+        }
+        
+        /* Breadcrumb */
+        .breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            font-size: 0.875rem;
+            color: #64748b;
+        }
+        
+        .breadcrumb-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .breadcrumb-item.active {
+            color: #3b82f6;
+            font-weight: 600;
+        }
+        
+        .breadcrumb-separator {
+            color: #cbd5e0;
+        }
+        
+        /* Gráficos clickeables */
+        .chart-clickable {
+            cursor: pointer;
+        }
+        
+        .chart-clickable:hover {
+            opacity: 0.9;
+        }
+        
+        /* Tabla de detalle */
+        .detail-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        
+        .detail-table th {
+            background: #f8fafc;
+            padding: 0.75rem 1rem;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #64748b;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        
+        .detail-table td {
+            padding: 1rem;
+            border-bottom: 1px solid #f1f5f9;
+            color: #475569;
+        }
+        
+        .detail-table tbody tr:hover {
+            background: #f8fafc;
+        }
+        
+        /* Filtros de detalle */
+        .detail-filters {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+        
+        .filter-button {
+            padding: 0.5rem 1rem;
+            border: 1px solid #e2e8f0;
+            background: #ffffff;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+        }
+        
+        .filter-button:hover {
+            border-color: #3b82f6;
+            color: #3b82f6;
+        }
+        
+        .filter-button.active {
+            background: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
+        }
+        
+        @media (max-width: 768px) {
+            .detail-modal {
+                padding: 1rem;
+            }
+            
+            .detail-modal-content {
+                padding: 1.5rem;
+            }
+        }
+        
+        /* Tooltips para métricas */
+        .metric-tooltip {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .metric-tooltip-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #e2e8f0;
+            color: #64748b;
+            font-size: 0.75rem;
+            margin-left: 0.5rem;
+            cursor: help;
+            transition: all 0.2s;
+            vertical-align: middle;
+        }
+        
+        .metric-tooltip-icon:hover {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        .metric-tooltip-content {
+            visibility: hidden;
+            opacity: 0;
+            position: absolute;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1e293b;
+            color: #ffffff;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            line-height: 1.5;
+            width: 280px;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            transition: opacity 0.3s, visibility 0.3s;
+            pointer-events: none;
+        }
+        
+        .metric-tooltip-content::after {
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 6px solid transparent;
+            border-top-color: #1e293b;
+        }
+        
+        .metric-tooltip:hover .metric-tooltip-content {
+            visibility: visible;
+            opacity: 1;
+        }
+        
+        .metric-tooltip-content strong {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #60a5fa;
+            font-weight: 600;
+        }
+        
+        .metric-tooltip-content p {
+            margin: 0.25rem 0;
+            color: #e2e8f0;
+        }
+        
+        .metric-tooltip-content .formula {
+            margin-top: 0.5rem;
+            padding: 0.5rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: #fbbf24;
+        }
+        
+        @media (max-width: 768px) {
+            .metric-tooltip-content {
+                width: 240px;
+                font-size: 0.8rem;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .metric-tooltip-content {
+                width: 200px;
+                font-size: 0.75rem;
+                padding: 0.5rem 0.75rem;
+            }
+        }
+        
+        /* Icono de IA - Minimalista */
+        .ai-insight-icon {
+            position: absolute;
+            top: 0.75rem;
+            right: 0.75rem;
+            width: 20px;
+            height: 20px;
+            background: transparent;
+            border: 1.5px solid #8b5cf6;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #8b5cf6;
+            font-size: 0.65rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            z-index: 10;
+            opacity: 0.6;
+        }
+        
+        .ai-insight-icon:hover {
+            opacity: 1;
+            background: #8b5cf6;
+            color: white;
+            border-color: #8b5cf6;
+            transform: scale(1.15);
+        }
+        
+        .ai-insight-icon::before {
+            content: 'AI';
+            font-weight: 600;
+            font-size: 0.6rem;
+            letter-spacing: -0.5px;
+        }
+        
+        /* Modal de Análisis IA */
+        .ai-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 3000;
+            overflow-y: auto;
+            padding: 2rem;
+        }
+        
+        .ai-modal.show {
+            display: block;
+        }
+        
+        .ai-modal-content {
+            background: #ffffff;
+            border-radius: 16px;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 2rem;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            position: relative;
+            margin-top: 2rem;
+            margin-bottom: 2rem;
+        }
+        
+        .ai-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        
+        .ai-modal-title {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #0f172a;
+        }
+        
+        .ai-modal-title::before {
+            content: '✨';
+            font-size: 1.75rem;
+        }
+        
+        .ai-modal-close {
+            background: #f1f5f9;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #64748b;
+            font-size: 1.25rem;
+            transition: all 0.2s;
+        }
+        
+        .ai-modal-close:hover {
+            background: #e2e8f0;
+            color: #0f172a;
+        }
+        
+        .ai-section {
+            margin-bottom: 2rem;
+        }
+        
+        .ai-section-title {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #0f172a;
+            margin-bottom: 1rem;
+        }
+        
+        .ai-section-title i {
+            color: #8b5cf6;
+        }
+        
+        .ai-analysis-card {
+            background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+            border-left: 4px solid #8b5cf6;
+            padding: 1.25rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+        
+        .ai-recommendation-card {
+            background: #fff7ed;
+            border-left: 4px solid #f59e0b;
+            padding: 1.25rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+        
+        .ai-action-card {
+            background: #f0fdf4;
+            border-left: 4px solid #10b981;
+            padding: 1.25rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+        
+        .ai-action-card .action-priority {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-top: 0.5rem;
+        }
+        
+        .ai-action-card .priority-high {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        .ai-action-card .priority-medium {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        
+        .ai-action-card .priority-low {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+        
+        .ai-metric-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            background: #ede9fe;
+            color: #6d28d9;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-left: 0.5rem;
+        }
+        
+        @media (max-width: 768px) {
+            .ai-modal {
+                padding: 1rem;
+            }
+            
+            .ai-modal-content {
+                padding: 1.5rem;
+            }
+            
+            .ai-insight-icon {
+                width: 28px;
+                height: 28px;
+                font-size: 0.75rem;
+            }
+        }
+        
+        /* Responsive adicional */
+        @media (max-width: 1024px) {
+            .sidebar {
+                width: 260px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .grid {
+                gap: 1rem;
+            }
+            
+            .metric-card {
+                padding: 1rem;
+            }
+            
+            .chart-container {
+                padding: 1rem;
+            }
+            
+            .section {
+                padding: 1rem;
+            }
+            
+            .data-table {
+                font-size: 0.75rem;
+            }
+            
+            .data-table th,
+            .data-table td {
+                padding: 0.5rem;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .metric-icon {
+                width: 40px;
+                height: 40px;
+                font-size: 1rem;
+            }
+            
+            .metric-label {
+                font-size: 0.7rem;
+            }
+            
+            .chart-title {
+                font-size: 0.875rem;
+            }
+            
+            .section-title {
+                font-size: 0.875rem;
+            }
+        }
+        
+        /* Mejoras para tablas en móviles */
+        @media (max-width: 768px) {
+            .overflow-x-auto {
+                -webkit-overflow-scrolling: touch;
+            }
+            
+            .data-table {
+                min-width: 600px;
+            }
+        }
+        
+        /* Ajustes adicionales para móviles pequeños */
+        @media (max-width: 480px) {
+            .sidebar {
+                width: 100%;
+                max-width: 280px;
+            }
+            
+            .metric-card {
+                min-height: auto;
+            }
+            
+            .flex.items-center.justify-between {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.5rem;
+            }
+            
+            .header-content {
+                flex-wrap: wrap;
+            }
+            
+            .page-title span {
+                display: none;
+            }
+            
+            .page-title i {
+                margin-right: 0;
+            }
+        }
+        
+        /* Mejoras para tablets */
+        @media (min-width: 769px) and (max-width: 1024px) {
+            .sidebar {
+                width: 240px;
+            }
+            
+            .main-content {
+                margin-left: 240px;
+            }
+        }
+        
+        /* Asegurar que los gráficos se adapten */
+        @media (max-width: 768px) {
+            .chart-canvas-container canvas {
+                max-width: 100%;
+            }
+            
+            /* Ajustar altura de gráficos en móviles */
+            .chart-container .chart-canvas-container {
+                min-height: 200px;
+            }
+        }
+        
+        /* Mejorar visibilidad en móviles */
+        @media (max-width: 480px) {
+            .badge {
+                font-size: 0.65rem;
+                padding: 0.2rem 0.5rem;
+            }
+            
+            .menu-number {
+                font-size: 0.7rem;
+            }
+            
+            .sidebar-title {
+                font-size: 0.65rem;
+            }
+        }
+        
+        /* Mejoras adicionales de responsive para evitar roturas */
+        @media (max-width: 768px) {
+            .detail-modal-content,
+            .ai-modal-content {
+                max-width: 95%;
+                padding: 1rem;
+                margin: 1rem auto;
+            }
+            
+            .detail-modal-header,
+            .ai-modal-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+            
+            .detail-modal-title,
+            .ai-modal-title {
+                font-size: 1.25rem;
+            }
+            
+            .grid {
+                grid-template-columns: 1fr !important;
+            }
+            
+            .grid.grid-cols-1.md\\:grid-cols-2.lg\\:grid-cols-4 {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .grid.grid-cols-1.lg\\:grid-cols-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .grid.grid-cols-1.md\\:grid-cols-2.lg\\:grid-cols-4 {
+                grid-template-columns: 1fr;
+            }
+            
+            .detail-modal,
+            .ai-modal {
+                padding: 0.5rem;
+            }
+            
+            .detail-modal-content,
+            .ai-modal-content {
+                padding: 1rem;
+                border-radius: 8px;
+            }
+            
+            .ai-section-title {
+                font-size: 1rem;
+            }
+            
+            .ai-analysis-card,
+            .ai-recommendation-card,
+            .ai-action-card {
+                padding: 1rem;
+                font-size: 0.875rem;
+            }
+        }
+        
+        /* Asegurar que los modales no se salgan de la pantalla */
+        @media (max-width: 1024px) {
+            .detail-modal-content,
+            .ai-modal-content {
+                max-width: calc(100vw - 2rem);
+            }
+        }
+        
+        /* Mejorar scroll en móviles */
+        @media (max-width: 768px) {
+            .detail-modal,
+            .ai-modal {
+                -webkit-overflow-scrolling: touch;
+            }
+            
+            .detail-table {
+                font-size: 0.7rem;
+            }
+            
+            .detail-table th,
+            .detail-table td {
+                padding: 0.5rem 0.25rem;
+            }
+        }
+        
+        /* Ajustar iconos de IA en móviles */
+        @media (max-width: 480px) {
+            .ai-insight-icon {
+                width: 24px;
+                height: 24px;
+                top: 0.5rem;
+                right: 0.5rem;
+                font-size: 0.7rem;
+            }
+        }
+        
+        /* Iconos de IA en tablas */
+        .data-table td {
+            position: relative;
+        }
+        
+        .data-table .ai-insight-icon {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+        }
+        
+        /* Mejorar espaciado en métricas en móviles */
+        @media (max-width: 480px) {
+            .metric-card {
+                margin-bottom: 0.75rem;
+            }
+            
+            .chart-container {
+                margin-bottom: 1rem;
+            }
+        }
+        
+        /* Asegurar que las tablas sean scrollables en móviles */
+        @media (max-width: 768px) {
+            .overflow-x-auto {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: thin;
+            }
+            
+            .detail-table {
+                display: block;
+                width: 100%;
+                overflow-x: auto;
+                white-space: nowrap;
+            }
+        }
+    </style>
+    <!-- Script de navegación inline para disponibilidad inmediata -->
+    <script>
+        // Definir showDashboard INMEDIATAMENTE
+        window.showDashboard = function(dashboardId) {
+            console.log('🔄 Navegando a:', dashboardId);
+            
+            // Ocultar todos
+            document.querySelectorAll('.dashboard').forEach(d => d.classList.add('dashboard-hidden'));
+            document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
+            
+            // Mostrar seleccionado
+            const dash = document.getElementById('dashboard-' + dashboardId);
+            if (dash) {
+                dash.classList.remove('dashboard-hidden');
+                window.currentDashboard = dashboardId;
+                
+                // Activar menú
+                document.querySelectorAll('.menu-item').forEach(item => {
+                    if (item.getAttribute('data-dashboard') === dashboardId) {
+                        item.classList.add('active');
+                    }
+                });
+                
+                // Actualizar título
+                const titles = {
+                    'principal': {title: 'Dashboard Principal', icon: 'fa-chart-line'},
+                    'cobranzas': {title: 'Dashboard de Cobranzas', icon: 'fa-dollar-sign'},
+                    'performance': {title: 'Performance de Agentes', icon: 'fa-users'},
+                    'productividad': {title: 'Productividad', icon: 'fa-tasks'},
+                    'calidad': {title: 'Calidad', icon: 'fa-star'},
+                    'financiero': {title: 'Dashboard Financiero', icon: 'fa-chart-pie'},
+                    'legal': {title: 'Dashboards Legales', icon: 'fa-gavel'},
+                    'observabilidad-operativa': {title: 'Observabilidad Operativa', icon: 'fa-tachometer-alt'},
+                    'observabilidad-comportamiento': {title: 'Observabilidad - Comportamiento del Cliente', icon: 'fa-brain'},
+                    'observabilidad-ia': {title: 'Observabilidad - Modelos de IA', icon: 'fa-robot'},
+                    'observabilidad-legal': {title: 'Observabilidad - Legal y Cumplimiento', icon: 'fa-gavel'},
+                    'unicomer-promesado-pagado': {title: 'UNICOMER - Promesado y Pagado Hoy', icon: 'fa-calendar-day'},
+                    'unicomer-rendimiento-agentes': {title: 'UNICOMER - Rendimiento de Agentes', icon: 'fa-users-cog'},
+                    'unicomer-gestiones': {title: 'UNICOMER - Gestiones', icon: 'fa-tasks'},
+                    'unicomer-alcance-meta': {title: 'UNICOMER - Alcance Meta DIC VS ENE', icon: 'fa-chart-bar'},
+                    'unicomer-estrategia': {title: 'UNICOMER - Informe de Estrategia', icon: 'fa-chart-line'}
+                };
+                
+                const titleInfo = titles[dashboardId];
+                const pageTitle = document.getElementById('pageTitle');
+                if (titleInfo && pageTitle) {
+                    pageTitle.innerHTML = '<i class="fas ' + titleInfo.icon + '" style="color: #3b82f6;"></i><span>' + titleInfo.title + '</span>';
+                }
+                
+                // Inicializar dashboard - con delay para asegurar que el DOM esté listo
+                const initFuncs = {
+                    'principal': 'initDashboardPrincipal',
+                    'cobranzas': 'initDashboardCobranzas',
+                    'performance': 'initDashboardPerformance',
+                    'productividad': 'initDashboardProductividad',
+                    'calidad': 'initDashboardCalidad',
+                    'financiero': 'initDashboardFinanciero',
+                    'legal': 'initDashboardLegal',
+                    'observabilidad-operativa': 'initObservabilidadOperativa',
+                    'observabilidad-comportamiento': 'initObservabilidadComportamiento',
+                    'observabilidad-ia': 'initObservabilidadIA',
+                    'observabilidad-legal': 'initObservabilidadLegal',
+                    'unicomer-promesado-pagado': 'initDashboardUnicomer',
+                    'unicomer-rendimiento-agentes': 'initDashboardUnicomer',
+                    'unicomer-gestiones': 'initDashboardUnicomer',
+                    'unicomer-alcance-meta': 'initDashboardUnicomer',
+                    'unicomer-estrategia': 'initDashboardUnicomer'
+                };
+                
+                const funcName = initFuncs[dashboardId];
+                if (funcName && typeof window[funcName] === 'function') {
+                    // Pequeño delay para asegurar que el contenedor esté visible
+                    setTimeout(() => {
+                        window[funcName]();
+                    }, 100);
+                } else {
+                    console.warn('Función de inicialización no encontrada:', funcName);
+                }
+                
+                console.log('✅ Dashboard cambiado a:', dashboardId);
+            } else {
+                console.error('❌ Dashboard no encontrado: dashboard-' + dashboardId);
+            }
+        };
+        
+        console.log('✅ showDashboard definido:', typeof window.showDashboard);
+        
+        // Inicializar dashboard principal cuando todo esté listo
+        function initPrincipalDashboard() {
+            console.log('=== INICIANDO DASHBOARD PRINCIPAL ===');
+            const principalDash = document.getElementById('dashboard-principal');
+            const principalContent = document.getElementById('principalContent');
+            
+            if (!principalDash) {
+                console.error('Dashboard principal no encontrado');
+                return;
+            }
+            
+            // Asegurar que esté visible
+            principalDash.classList.remove('dashboard-hidden');
+            console.log('Dashboard principal visible');
+            
+            // Inicializar contenido si existe la función
+            if (typeof window.initDashboardPrincipal === 'function') {
+                console.log('Llamando initDashboardPrincipal...');
+                window.initDashboardPrincipal();
+            } else {
+                console.warn('initDashboardPrincipal no está disponible aún, esperando...');
+                setTimeout(function() {
+                    if (typeof window.initDashboardPrincipal === 'function') {
+                        window.initDashboardPrincipal();
+                    } else {
+                        console.error('initDashboardPrincipal nunca se cargó');
+                    }
+                }, 1000);
+            }
+        }
+        
+        // Intentar inicializar cuando el DOM esté listo
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', function() {
+                setTimeout(initPrincipalDashboard, 500);
+            });
+        } else {
+            setTimeout(initPrincipalDashboard, 500);
+        }
+        
+        // Fallback adicional cuando todos los scripts estén cargados
+        window.addEventListener('load', function() {
+            setTimeout(function() {
+                const principalContent = document.getElementById('principalContent');
+                if (principalContent && principalContent.innerHTML.trim() === '') {
+                    console.log('Contenido vacío detectado, reinicializando...');
+                    initPrincipalDashboard();
+                }
+            }, 1000);
+        });
+        
+        // Función para toggle del sidebar en móviles
+        window.toggleSidebar = function() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            if (sidebar && overlay) {
+                sidebar.classList.toggle('open');
+                overlay.classList.toggle('show');
+            }
+        };
+        
+        // Cerrar sidebar al hacer click en un item (móviles)
+        window.closeSidebar = function() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            if (sidebar && overlay) {
+                sidebar.classList.remove('open');
+                overlay.classList.remove('show');
+            }
+        };
+        
+        // Modificar showDashboard para cerrar sidebar en móviles
+        const originalShowDashboard = window.showDashboard;
+        window.showDashboard = function(dashboardId) {
+            originalShowDashboard(dashboardId);
+            // Cerrar sidebar en móviles después de seleccionar
+            if (window.innerWidth <= 1024) {
+                setTimeout(() => {
+                    window.closeSidebar();
+                }, 300);
+            }
+        };
+    </script>
+</head>
+<body>
+    <!-- Overlay para móviles -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+    
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 2rem;">
+                <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #3b82f6, #8b5cf6); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                    <i class="fas fa-headset" style="color: white; font-size: 1.25rem;"></i>
+                </div>
+                <div>
+                    <div style="font-size: 1rem; font-weight: 700; color: #ffffff;">POM Dasboards</div>
+                    <div style="font-size: 0.75rem; color: #94a3b8;">Dashboards</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="sidebar-title">Dashboards Operativos</div>
+        
+        <div class="menu-item active" data-dashboard="principal" onclick="window.showDashboard && window.showDashboard('principal'); window.closeSidebar && window.closeSidebar();">
+            <span class="menu-number">01</span>
+            <i class="fas fa-chart-line"></i>
+            <span>Dashboard Principal</span>
+        </div>
+        
+        <div class="menu-item" data-dashboard="cobranzas" onclick="window.showDashboard && window.showDashboard('cobranzas'); window.closeSidebar && window.closeSidebar();">
+            <span class="menu-number">02</span>
+            <i class="fas fa-dollar-sign"></i>
+            <span>Dashboard de Cobranzas</span>
+        </div>
+        
+        <div class="menu-item" data-dashboard="performance" onclick="window.showDashboard && window.showDashboard('performance'); window.closeSidebar && window.closeSidebar();">
+            <span class="menu-number">03</span>
+            <i class="fas fa-users"></i>
+            <span>Performance de Agentes</span>
+        </div>
+        
+        <div class="menu-item" data-dashboard="productividad" onclick="window.showDashboard && window.showDashboard('productividad'); window.closeSidebar && window.closeSidebar();">
+            <span class="menu-number">04</span>
+            <i class="fas fa-tasks"></i>
+            <span>Productividad</span>
+        </div>
+        
+        <div class="menu-item" data-dashboard="calidad" onclick="window.showDashboard && window.showDashboard('calidad'); window.closeSidebar && window.closeSidebar();">
+            <span class="menu-number">05</span>
+            <i class="fas fa-star"></i>
+            <span>Calidad</span>
+        </div>
+        
+        <div class="menu-item" data-dashboard="financiero" onclick="window.showDashboard && window.showDashboard('financiero'); window.closeSidebar && window.closeSidebar();">
+            <span class="menu-number">06</span>
+            <i class="fas fa-chart-pie"></i>
+            <span>Dashboard Financiero</span>
+        </div>
+        
+        <div class="menu-item" data-dashboard="legal" onclick="window.showDashboard && window.showDashboard('legal'); window.closeSidebar && window.closeSidebar();">
+            <span class="menu-number">07</span>
+            <i class="fas fa-gavel"></i>
+            <span>Dashboards Legales</span>
+        </div>
+        
+        <div style="padding: 1.5rem; border-top: 1px solid rgba(255, 255, 255, 0.1); margin-top: 1rem;">
+            <div class="sidebar-title">Observabilidad</div>
+        </div>
+        
+        <div class="menu-item" data-dashboard="observabilidad-operativa" onclick="window.showDashboard && window.showDashboard('observabilidad-operativa'); window.closeSidebar && window.closeSidebar();">
+            <span class="menu-number">08</span>
+            <i class="fas fa-tachometer-alt"></i>
+            <span>Observabilidad Operativa</span>
+        </div>
+        
+        <div class="menu-item" data-dashboard="observabilidad-comportamiento" onclick="window.showDashboard && window.showDashboard('observabilidad-comportamiento'); window.closeSidebar && window.closeSidebar();">
+            <span class="menu-number">09</span>
+            <i class="fas fa-brain"></i>
+            <span>Comportamiento del Cliente</span>
+        </div>
+        
+        <div class="menu-item" data-dashboard="observabilidad-ia" onclick="window.showDashboard && window.showDashboard('observabilidad-ia'); window.closeSidebar && window.closeSidebar();">
+            <span class="menu-number">10</span>
+            <i class="fas fa-robot"></i>
+            <span>Modelos de IA</span>
+        </div>
+        
+        <div class="menu-item" data-dashboard="observabilidad-legal" onclick="window.showDashboard && window.showDashboard('observabilidad-legal'); window.closeSidebar && window.closeSidebar();">
+            <span class="menu-number">11</span>
+            <i class="fas fa-shield-alt"></i>
+            <span>Legal y Cumplimiento</span>
+        </div>
+        
+        <div style="padding: 1.5rem; border-top: 1px solid rgba(255, 255, 255, 0.1); margin-top: 1rem;">
+            <div class="sidebar-title">Dashboard UNICOMER</div>
+        </div>
+        
+        <div class="menu-item" data-dashboard="unicomer-promesado-pagado" onclick="window.showDashboard && window.showDashboard('unicomer-promesado-pagado'); window.closeSidebar && window.closeSidebar();">
+            <span class="menu-number">12</span>
+            <i class="fas fa-calendar-day"></i>
+            <span>Promesado y Pagado Hoy</span>
+        </div>
+        
+        <div class="menu-item" data-dashboard="unicomer-rendimiento-agentes" onclick="window.showDashboard && window.showDashboard('unicomer-rendimiento-agentes'); window.closeSidebar && window.closeSidebar();">
+            <span class="menu-number">13</span>
+            <i class="fas fa-users-cog"></i>
+            <span>Rendimiento de Agentes</span>
+        </div>
+        
+        <div class="menu-item" data-dashboard="unicomer-gestiones" onclick="window.showDashboard && window.showDashboard('unicomer-gestiones'); window.closeSidebar && window.closeSidebar();">
+            <span class="menu-number">14</span>
+            <i class="fas fa-tasks"></i>
+            <span>Gestiones</span>
+        </div>
+        
+        <div class="menu-item" data-dashboard="unicomer-alcance-meta" onclick="window.showDashboard && window.showDashboard('unicomer-alcance-meta'); window.closeSidebar && window.closeSidebar();">
+            <span class="menu-number">15</span>
+            <i class="fas fa-chart-bar"></i>
+            <span>Alcance Meta DIC VS ENE</span>
+        </div>
+        
+        <div class="menu-item" data-dashboard="unicomer-estrategia" onclick="window.showDashboard && window.showDashboard('unicomer-estrategia'); window.closeSidebar && window.closeSidebar();">
+            <span class="menu-number">16</span>
+            <i class="fas fa-chart-line"></i>
+            <span>Informe de Estrategia</span>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Top Header -->
+        <header class="top-header">
+            <div class="header-content">
+                <button class="menu-toggle" onclick="toggleSidebar()" aria-label="Toggle menu">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div class="page-title" id="pageTitle">
+                    <i class="fas fa-chart-line" style="color: #3b82f6;"></i>
+                    <span>Dashboard Principal</span>
+                </div>
+                <div class="header-info">
+                    <div class="status-indicator">
+                        <span class="status-dot"></span>
+                        <span>Actualizado en tiempo real</span>
+                    </div>
+                    <div style="font-family: 'JetBrains Mono', monospace; font-size: 0.875rem; color: #64748b;" id="lastUpdate">
+                        --:--:--
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Dashboard Content -->
+        <div class="dashboard-content">
+            <!-- Dashboard Principal -->
+            <div id="dashboard-principal" class="dashboard">
+                <div id="principalContent">
+                    <div style="padding: 2rem; text-align: center; color: #64748b;">
+                        <i class="fas fa-spinner fa-spin" style="font-size: 2rem; margin-bottom: 1rem;"></i>
+                        <p>Cargando dashboard...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dashboard de Cobranzas -->
+            <div id="dashboard-cobranzas" class="dashboard dashboard-hidden">
+                <div id="cobranzasContent">
+                    <!-- Se carga dinámicamente -->
+                </div>
+            </div>
+
+            <!-- Dashboard Performance -->
+            <div id="dashboard-performance" class="dashboard dashboard-hidden">
+                <div id="performanceContent">
+                    <!-- Se carga dinámicamente -->
+                </div>
+            </div>
+
+            <!-- Dashboard Productividad -->
+            <div id="dashboard-productividad" class="dashboard dashboard-hidden">
+                <div id="productividadContent">
+                    <!-- Se carga dinámicamente -->
+                </div>
+            </div>
+
+            <!-- Dashboard Calidad -->
+            <div id="dashboard-calidad" class="dashboard dashboard-hidden">
+                <div id="calidadContent">
+                    <!-- Se carga dinámicamente -->
+                </div>
+            </div>
+
+            <!-- Dashboard Financiero -->
+            <div id="dashboard-financiero" class="dashboard dashboard-hidden">
+                <div id="financieroContent">
+                    <!-- Se carga dinámicamente -->
+                </div>
+            </div>
+            
+            <!-- Dashboard Legal -->
+            <div id="dashboard-legal" class="dashboard dashboard-hidden">
+                <div id="legalContent">
+                    <!-- Se carga dinámicamente -->
+                </div>
+            </div>
+            
+            <!-- Dashboards de Observabilidad -->
+            <div id="dashboard-observabilidad-operativa" class="dashboard dashboard-hidden">
+                <div id="observabilidadOperativaContent">
+                    <!-- Se carga dinámicamente -->
+                </div>
+            </div>
+            
+            <div id="dashboard-observabilidad-comportamiento" class="dashboard dashboard-hidden">
+                <div id="observabilidadComportamientoContent">
+                    <!-- Se carga dinámicamente -->
+                </div>
+            </div>
+            
+            <div id="dashboard-observabilidad-ia" class="dashboard dashboard-hidden">
+                <div id="observabilidadIAContent">
+                    <!-- Se carga dinámicamente -->
+                </div>
+            </div>
+            
+            <div id="dashboard-observabilidad-legal" class="dashboard dashboard-hidden">
+                <div id="observabilidadLegalContent">
+                    <!-- Se carga dinámicamente -->
+                </div>
+            </div>
+            
+            <!-- Dashboards UNICOMER -->
+            <div id="dashboard-unicomer-promesado-pagado" class="dashboard dashboard-hidden">
+                <div id="unicomerPromesadoPagadoContent">
+                    <!-- Se carga dinámicamente -->
+                </div>
+            </div>
+            
+            <div id="dashboard-unicomer-rendimiento-agentes" class="dashboard dashboard-hidden">
+                <div id="unicomerRendimientoAgentesContent">
+                    <!-- Se carga dinámicamente -->
+                </div>
+            </div>
+            
+            <div id="dashboard-unicomer-gestiones" class="dashboard dashboard-hidden">
+                <div id="unicomerGestionesContent">
+                    <!-- Se carga dinámicamente -->
+                </div>
+            </div>
+            
+            <div id="dashboard-unicomer-alcance-meta" class="dashboard dashboard-hidden">
+                <div id="unicomerAlcanceMetaContent">
+                    <!-- Se carga dinámicamente -->
+                </div>
+            </div>
+            
+            <div id="dashboard-unicomer-estrategia" class="dashboard dashboard-hidden">
+                <div id="unicomerEstrategiaContent">
+                    <!-- Se carga dinámicamente -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal de Detalle -->
+    <div class="detail-modal" id="detailModal">
+        <div class="detail-modal-content" id="detailModalContent">
+            <!-- Se carga dinámicamente -->
+        </div>
+    </div>
+    
+    <!-- Modal de Análisis IA -->
+    <div class="ai-modal" id="aiModal">
+        <div class="ai-modal-content" id="aiModalContent">
+            <!-- Se carga dinámicamente -->
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script src="drill-down.js"></script>
+    <script src="ai-insights.js"></script>
+    <script src="dashboard-principal.js"></script>
+    <script src="dashboard-cobranzas.js"></script>
+    <script src="dashboard-performance.js"></script>
+    <script src="dashboard-productividad.js"></script>
+    <script src="dashboard-calidad.js"></script>
+    <script src="dashboard-financiero.js"></script>
+    <script src="dashboard-legal.js"></script>
+    <script src="observabilidad-operativa.js"></script>
+    <script src="observabilidad-comportamiento.js"></script>
+    <script src="observabilidad-ia.js"></script>
+    <script src="observabilidad-legal.js"></script>
+    <script src="dashboard-unicomer.js"></script>
+    <script src="navigation.js"></script>
+</body>
+</html>
